@@ -4,10 +4,14 @@
 int leds[4] = {2, 3, 4, 5};
 int difficulty;
 int factor;
+int pos;
 boolean reverse;
+boolean freezeLeds;
 
 void setup() {
+  freezeLeds = false;
   reverse = false;
+  pos = 0;
   Serial.begin(9600);
   // difficulty = analogRead(POT_PIN);
   pinMode(2, OUTPUT);
@@ -80,9 +84,47 @@ void atomicTesting() {
   }
 }
 
+void shiftLeds() {
+  if(!freezeLeds) {
+  //Right --> Left
+  if (!reverse){
+    for (int i = 0; i <= 3; i++) {
+        if (digitalRead(leds[i]) == HIGH) {
+           pos = i;
+           digitalWrite(leds[pos], LOW);
+        }
+    }  
+
+    if (pos < 3) {
+      digitalWrite(leds[pos+1], HIGH);
+    } else {
+      //digitalWrite(leds[pos-1], HIGH);
+      reverse = true;
+    }
+  }
+  
+  if (reverse) {
+    //Left --> Right
+    for (int j = 3; j >= 0; j--) {
+        if (digitalRead(leds[j]) == HIGH) {
+            pos = j;
+            digitalWrite(leds[pos], LOW);
+        }
+    }  
+
+    if (pos > 0) {
+        digitalWrite(leds[pos-1], HIGH);
+      } else {
+        digitalWrite(leds[pos+1], HIGH);
+        reverse = false;
+    }
+  }
+  }
+}
+
 void loop() {
   //switchLed();
   //Timer1.initialize(5000000 / (factor + difficulty));
   Timer1.initialize(2000000);
-  Timer1.attachInterrupt(TestRightLeft);
+  Timer1.attachInterrupt(shiftLeds);
 }
