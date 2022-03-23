@@ -17,10 +17,14 @@ int test = 0;
 int frequency = 2;
 int difficulty = 1;
 int factor = 50;
-unsigned int S = 1000; //Timer-millis per switch Leds
+unsigned int S = 2000; //Timer-millis per switch Leds
+unsigned int T1 = 10000; //Timer-millis per pausa ogni 10s
+unsigned int T2 = 3000000; //Timer1 per premere il bottone
+
 
 int positionButtonPressed = 0;
 int buttonToPress = 0;
+int score = 0;
 
 boolean resetInterval;
 boolean startTimingPause;
@@ -59,7 +63,7 @@ void loop() {
   }
 
   // vai in pausa
-  if (timeBeforePause(10000)) {
+  if (timeBeforePause(T1)) {
     startTimingPause = false;
     Serial.println("Vai in PAUSA");
     pauseLed();
@@ -71,27 +75,49 @@ void loop() {
 
 void pauseLed() {
   freezeLeds = true;
+  buttonToPress = findActiveLed();
+  //memorizziamo il LED che dobbiamo premere e che rimane acceso
+  Serial.print("Premi il Tasto: ");
+  Serial.println(buttonToPress);
+}
+
+int findActiveLed() {
+  for (int i = 0; i <= 3; i++) {
+        if (digitalRead(leds[i])) {
+           return i;
+        }
+    }
 }
 
 void timeToPressButtonFinished() {
   Serial.println("FINE PAUSA");
   Timer1.stop();
   freezeLeds = false;
-  //Controllo se hai premuto il bottone giusto o no
-  //....
+  //Controllo se è stato premuto il bottone giusto o no
+  
+  if (positionButtonPressed == buttonToPress) {
+      score += 100;
+      Serial.println(score);
+  } else {
+      Serial.println("GAME-OVER");
+  }
+
+  //Resettiamo il bottone premuto precedentemente
+  positionButtonPressed = -1;
+  
   //Ogni volta che viene premuto il pulsante diminuiamo la velocità dei LEDS
-  //reduceTimesGame();
+  reduceTimesGame();
   //Serial.println(S);
 }
 
 void pressedButton() {  
-  if (digitalRead(btn_0) == HIGH) {
+  if (digitalRead(btn_0)) {
     positionButtonPressed = 0;
-  } else if (digitalRead(btn_1) == HIGH) {
+  } else if (digitalRead(btn_1)) {
     positionButtonPressed = 1;
-  } else if (digitalRead(btn_2) == HIGH) {
+  } else if (digitalRead(btn_2)) {
     positionButtonPressed = 2;
-  } else if (digitalRead(btn_3) == HIGH) {
+  } else if (digitalRead(btn_3)) {
     positionButtonPressed = 3;
   }
 }
@@ -146,14 +172,14 @@ int timeBetweenLeds(int timerInterval) {
   return ret;
 }
 
-void buttonPressed() {
-  //Serial.println("PREMUTO");
-}
-
 void reduceTimesGame() {
   if (S > 50) {
     S -= (factor * difficulty);
-  }  
+  }
+
+  if (T2 > 50) {
+    T2 -= (factor * difficulty);
+  }
 }
 
 int timerPause(int timerPause) {
@@ -174,7 +200,6 @@ int timerPause(int timerPause) {
 }
 
 void shiftLeds() {
-  //if(!freezeLeds) {
   //Right --> Left
   if (!reverse){
     for (int i = 0; i <= 3; i++) {
@@ -211,5 +236,4 @@ void shiftLeds() {
         reverse = false;
       }
     }
-  //}
 }
