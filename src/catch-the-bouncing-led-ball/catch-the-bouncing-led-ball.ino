@@ -13,14 +13,12 @@ int btn_2 = 6;
 int btn_3 = 7;
 
 int pos = 0;
-int test = 0;
 int frequency = 2;
 int difficulty = 1;
-int factor = 50;
+int factor = 100;
 unsigned int S = 2000; //Timer-millis per switch Leds
 unsigned int T1 = 10000; //Timer-millis per pausa ogni 10s
-unsigned int T2 = 3000000; //Timer1 per premere il bottone
-
+unsigned int T2 = 3000; //Timer-millis per premere il bottone
 
 int positionButtonPressed = 0;
 int buttonToPress = 0;
@@ -30,6 +28,7 @@ boolean resetInterval;
 boolean startTimingPause;
 boolean reverse = false;
 boolean freezeLeds = false;
+boolean isGameOver = false;
   
 int leds[4] = {led_0, led_1, led_2, led_3};
 int buttons[4] = {btn_0, btn_1, btn_2, btn_3};
@@ -55,6 +54,8 @@ void setup() {
 }
 
 void loop() {
+  if (!isGameOver) {
+  
   if (timeBetweenLeds(S)) {
     if (!freezeLeds) {
       Serial.println("SWITCH");
@@ -68,8 +69,12 @@ void loop() {
     Serial.println("Vai in PAUSA");
     pauseLed();
     //Timer1 usato come tempo per premere il Bottone
-    Timer1.initialize(3000000);
-    Timer1.attachInterrupt(timeToPressButtonFinished);
+    //Timer1.initialize(3000000);
+    //Timer1.attachInterrupt(timeToPressButtonFinished);
+
+    delay(T2);
+    timeToPressButtonFinished();
+  }
   }
 }
 
@@ -89,6 +94,33 @@ int findActiveLed() {
     }
 }
 
+void restartGame() {
+  isGameOver = true;
+  Serial.print("Game Over. Final Score: ");
+  Serial.println(score);
+  delay(10000);
+
+  digitalWrite(leds[0], LOW);
+  digitalWrite(leds[1], LOW);
+  digitalWrite(leds[2], LOW);
+  digitalWrite(leds[3], LOW);
+  
+  S = 2000; //Timer-millis per switch Leds
+  T1 = 10000; //Timer-millis per pausa ogni 10s
+  T2 = 3000; //Timer-millis per premere il bottone
+
+  pos = 0;
+  positionButtonPressed = 0;
+  buttonToPress = 0;
+  score = 0;
+  digitalWrite(leds[0], HIGH);
+  
+  startTimingPause = false;
+  resetInterval = true;
+  reverse = false;
+  isGameOver = false;
+}
+
 void timeToPressButtonFinished() {
   Serial.println("FINE PAUSA");
   Timer1.stop();
@@ -97,9 +129,10 @@ void timeToPressButtonFinished() {
   
   if (positionButtonPressed == buttonToPress) {
       score += 100;
+      Serial.print("New point! Score: ");
       Serial.println(score);
   } else {
-      Serial.println("GAME-OVER");
+      //restartGame();
   }
 
   //Resettiamo il bottone premuto precedentemente
@@ -127,9 +160,7 @@ int timeBeforePause(int timeBefore) {
   static unsigned long t1, dt; 
   int ret = 0;
 
-  //if (resetInterval) {
-    dt = millis() - t1;
-  //}
+  dt = millis() - t1;
 
   //scatta l'interrupt
   if (dt >= timeBefore) {
@@ -140,28 +171,12 @@ int timeBeforePause(int timeBefore) {
   return ret;
 }
 
-void resumeLed() {
-  if (positionButtonPressed == buttonToPress) {
-      //Serial.println("CONTINUA");
-  } else {
-      //Serial.println("GAME-OVER");
-  }
-  
-  Serial.println("RESUME");
-  //freezeLedss = false;
-  //Timer1.stop();
-  //startTimingPause = true;
-  //generatedLedToPress = false;
-}
-
 //Timer-millis intervallo tra 1 Led e un altro: parte da 4s
 int timeBetweenLeds(int timerInterval) {
   static unsigned long t1, dt; 
   int ret = 0;
 
-  //if (resetInterval) {
-    dt = millis() - t1;
-  //}
+  dt = millis() - t1;
 
   //scatta l'interrupt
   if (dt >= timerInterval) {
@@ -173,7 +188,7 @@ int timeBetweenLeds(int timerInterval) {
 }
 
 void reduceTimesGame() {
-  if (S > 50) {
+  if (S > 200) {
     S -= (factor * difficulty);
   }
 
