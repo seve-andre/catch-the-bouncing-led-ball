@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "StatusGame.h"
 
 void pauseLed();
 

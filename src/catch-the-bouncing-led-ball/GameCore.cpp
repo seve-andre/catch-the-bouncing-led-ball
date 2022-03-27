@@ -4,9 +4,8 @@
 #include "GameConfig.h"
 #include "GameCore.h"
 #include <avr/sleep.h>
-#include "StatusGame.h"
 
-
+int gameStatus;
 int frequency = 2;
 int difficulty = 1;
 int factor = 100;
@@ -17,19 +16,40 @@ unsigned int T2 = 3000; //Timer-millis per premere il bottone
 int positionButtonPressed = 0;
 int buttonToPress = 0;
 int score = 0;
-int fadeAmount;
-int currIntensity;
+int fadeAmount = 5;
+int currIntensity = 0;
 int pos = 0;
+//int conteggio = 0;
+//int typePression = 0;
 
-boolean resetInterval;
-boolean startTimingPause;
+boolean resetInterval = true;
+boolean startTimingPause = false;
 boolean generatedLedToPress;
 
 boolean reverse = false;
 boolean freezeLeds = false;
 boolean isGameOver = false;
-
 boolean isSleepModeOn = false;
+boolean firstTimeGameCore = true;
+boolean statoDiMezzo = false;
+
+//debounce
+int  cont = 0;
+int conteggio = 0;
+
+const int ON = HIGH;
+const int OFF = LOW;
+
+long tReleaseButton;
+long tPressionButton;
+long t;
+long debouncingDelay = 200;
+
+//const int ON = HIGH;
+//const int OFF = LOW;
+
+//long tReleaseButton;
+//long tPressionButton;
 
 int leds[N_GREEN_LEDS] = {LED_0, LED_1, LED_2, LED_3}; 
 int buttons[N_BUTTONS] = {BTN_0, BTN_1, BTN_2, BTN_3};
@@ -38,23 +58,56 @@ void disableSleepMode() {
     Serial.println("Disable Sleep Mode");
     /* First thing to do is disable sleep. */
     sleep_disable();
+    statoDiMezzo = false;
     isSleepModeOn = false;
 }
 
-void startOrSleep() {
-  if (isSleepModeOn) {
-    disableSleepMode();
+void debounce() {
+  int tasto = digitalRead(BTN_0);
+  //gameStatus = 0;
+
+  if (tasto) {
+    if ((millis() - t) > debouncingDelay) {
+        Serial.println("ok");
+        cont++;
+    } 
   } else {
-    Serial.println("starting");
-    gameStatus = PLAY_GAME;
+      if (cont > 5 && !isSleepModeOn && statoDiMezzo) {
+        gameStatus = 2;
+      }
+      
+      if (cont <= 5 && cont > 0 && isSleepModeOn) {
+        gameStatus = 1;
+        disableSleepMode();
+      }
+
+      Serial.println(gameStatus);
   }
+  
+  delay(200);
 }
 
+void startOrSleep() {
+  debounce();
+
+  delay(1000);
+  
+  //if (isSleepModeOn) {
+    //statoDiMezzo = false;
+    //gameStatus = 1;
+  //} else if(!isSleepModeOn && statoDiMezzo) {
+  //  statoDiMezzo = false;
+  //  Serial.println("starting");
+  //  gameStatus = 2;
+  //}
+}
+
+
 void setUpGameIntro() {
-  currIntensity = 0; 
-  fadeAmount = 5; 
+  conteggio = OFF;
 
   enableInterrupt(BTN_0, startOrSleep, CHANGE);
+  //pinMode(BTN_0, INPUT);
   enableInterrupt(BTN_1, disableSleepMode, RISING);
   enableInterrupt(BTN_2, disableSleepMode, RISING);
   enableInterrupt(BTN_3, disableSleepMode, RISING);
@@ -94,7 +147,7 @@ int timeBeforeSleep(int timeBefore) {
 void deepSleepingMode() {
   isSleepModeOn = true;
   Serial.println("SLEEP MODE");
-  analogWrite(RED_LED, 0); 
+  analogWrite(RED_LED, LOW); 
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   sleep_enable();
@@ -102,33 +155,28 @@ void deepSleepingMode() {
 }
 
 void gameIntro() {
-  setUpGameIntro();
   fadeLed();
-
+  statoDiMezzo = true;
+  
   if (timeBeforeSleep(10000)) {
+     statoDiMezzo = false;
      deepSleepingMode();
   }
 }
 
 //------------------------------
 void setUpPlayGame() {
+    analogWrite(RED_LED, LOW); 
     //Ad inizio partita va inserito questo led a HIGH per far partire il ciclo di shiftLeds
-    digitalWrite(leds[0], HIGH);
-    startTimingPause = false;
-    resetInterval = true;
-
-    S = 2000; //Timer-millis per switch Leds
-    T1 = 10000; //Timer-millis per pausa ogni 10s
-    T2 = 3000; //Timer-millis per premere il bottone
-
-    positionButtonPressed = 0;
-    buttonToPress = 0;
-    score = 0;
-  
-    startTimingPause = false;
-    resetInterval = true;
-    reverse = false;
-    isGameOver = false;
+    if (firstTimeGameCore) {
+      digitalWrite(leds[0], HIGH);
+      firstTimeGameCore = false;
+      
+      for (int i = 0; i < N_GREEN_LEDS; i++) {
+        pinMode(leds[i], OUTPUT);
+        enableInterrupt(buttons[i], pressedButton, CHANGE);
+      }
+    }
 }
 
 void shiftLeds() {
@@ -253,7 +301,7 @@ void restartGame() {
   delay(10000);
 
   initLeds();
-  gameStatus = GAME_INTRO;
+  gameStatus = 1;
 }
 
 void timeToPressButtonFinished() {

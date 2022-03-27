@@ -1,7 +1,8 @@
 #include <TimerOne.h>
 #include "GameConfig.h"
 #include "GameCore.h"
-#include "StatusGame.h"
+#include "Arduino.h"
+
 
 //int pos = 0;
 //int frequency = 2;
@@ -14,23 +15,47 @@
 //boolean resetInterval;
 //boolean startTimingPause;
 
+boolean isPressedStartGame;
+
+int typePression = 0;
 
 void setup() {
-  initGame();
-  gameStatus = GAME_INTRO;
+  Serial.begin(9600); 
+  setUpGameIntro();
+  isPressedStartGame = false;
+  gameStatus = 1;
 }
 
-void loop() {
+//int findDifferentButtonPression() {
+//  if ((digitalRead(BTN_0) == HIGH) && (conteggio == OFF)) {
+//      conteggio = ON;
+//      tPressionButton = millis();
+//  }
+//
+//  if ((conteggio == ON) && (digitalRead(BTN_0) == LOW)) {
+//      conteggio = OFF;
+//      tReleaseButton = millis() - tPressionButton;
+//
+//      if (tReleaseButton < 450) {
+//          return 1;
+//      } else {
+//          return 2;
+//      }
+//  }
+//}
+
+void loop() {  
   switch(gameStatus) {
-    case GAME_INTRO:
+    case 1:
       gameIntro();
       break;
 
-    case PLAY_GAME:
+    case 2:
       playGame();
       break;
   }
 }
+
 //
 //void restartGame() {
 //  isGameOver = true;
