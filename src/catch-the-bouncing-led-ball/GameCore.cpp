@@ -25,6 +25,7 @@ int pos = 0;
 boolean resetInterval = true;
 boolean startTimingPause = false;
 boolean generatedLedToPress;
+boolean restartSleepModeAfterEndGame = false;
 
 boolean reverse = false;
 boolean freezeLeds = false;
@@ -36,6 +37,7 @@ boolean statoDiMezzo = false;
 //debounce
 int  cont = 0;
 int conteggio = 0;
+unsigned long t1, dt; 
 
 const int ON = HIGH;
 const int OFF = LOW;
@@ -64,8 +66,7 @@ void disableSleepMode() {
 
 void debounce() {
   int tasto = digitalRead(BTN_0);
-  //gameStatus = 0;
-
+  
   if (tasto) {
     if ((millis() - t) > debouncingDelay) {
         Serial.println("ok");
@@ -76,7 +77,7 @@ void debounce() {
         gameStatus = 2;
       }
       
-      if (cont <= 5 && cont > 0 && isSleepModeOn) {
+      if (cont <= 5  && cont > 0 && isSleepModeOn) {
         gameStatus = 1;
         disableSleepMode();
       }
@@ -107,7 +108,6 @@ void setUpGameIntro() {
   conteggio = OFF;
 
   enableInterrupt(BTN_0, startOrSleep, CHANGE);
-  //pinMode(BTN_0, INPUT);
   enableInterrupt(BTN_1, disableSleepMode, RISING);
   enableInterrupt(BTN_2, disableSleepMode, RISING);
   enableInterrupt(BTN_3, disableSleepMode, RISING);
@@ -117,7 +117,7 @@ void setUpGameIntro() {
   isSleepModeOn = false;
 }
 
-void fadeLed() {
+void fadeLed() {  
   analogWrite(RED_LED, currIntensity); 
   currIntensity = currIntensity + fadeAmount;
   
@@ -130,7 +130,6 @@ void fadeLed() {
 
 //vai in SLEEP-MODE dopo 10s
 int timeBeforeSleep(int timeBefore) {
-  static unsigned long t1, dt; 
   int ret = 0;
 
   dt = millis() - t1;
@@ -147,7 +146,7 @@ int timeBeforeSleep(int timeBefore) {
 void deepSleepingMode() {
   isSleepModeOn = true;
   Serial.println("SLEEP MODE");
-  analogWrite(RED_LED, LOW); 
+  analogWrite(RED_LED, LOW);
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   sleep_enable();
@@ -157,8 +156,9 @@ void deepSleepingMode() {
 void gameIntro() {
   fadeLed();
   statoDiMezzo = true;
-  
+    
   if (timeBeforeSleep(10000)) {
+     Serial.println("vado in Sleep Mode");
      statoDiMezzo = false;
      deepSleepingMode();
   }
@@ -218,7 +218,6 @@ void shiftLeds() {
     }
 }
 
-
 int findActiveLed() {
   for (int i = 0; i <= 3; i++) {
         if (digitalRead(leds[i])) {
@@ -249,9 +248,6 @@ void ledInGame() {
       startTimingPause = false;
       Serial.println("Vai in PAUSA");
       pauseLed();
-      //Timer1 usato come tempo per premere il Bottone
-      //Timer1.initialize(3000000);
-      //Timer1.attachInterrupt(timeToPressButtonFinished);
 
       delay(T2);
       timeToPressButtonFinished();
@@ -264,27 +260,6 @@ void playGame() {
    ledInGame();
 }
 
-//#define LED_PIN 3
-//#define BTN_0 4
-//#define BTN_1 5
-//#define BTN_2 6
-//#define BTN_3 7
-//
-
-//DA INSERIRE IN FILE .ino
-////void setup() {
-////  Serial.begin(9600);
-////  pinMode(led_0, OUTPUT);
-////  pinMode(led_1, OUTPUT);
-////  pinMode(led_2, OUTPUT);
-////  pinMode(led_3, OUTPUT);
-////
-////  enableInterrupt(btn_0, pressedButton, CHANGE);
-////  enableInterrupt(btn_1, pressedButton, CHANGE);
-////  enableInterrupt(btn_2, pressedButton, CHANGE);
-////  enableInterrupt(btn_3, pressedButton, CHANGE);
-////}
-
 void initLeds() {
   pos = 0;
   
@@ -295,13 +270,17 @@ void initLeds() {
 }
 
 void restartGame() {
+  initLeds();
+  currIntensity = 0;
+  fadeAmount = 5;
   isGameOver = true;
+  
   Serial.print("Game Over. Final Score: ");
   Serial.println(score);
   delay(10000);
-
-  initLeds();
+  
   gameStatus = 1;
+  t1 = millis();
 }
 
 void timeToPressButtonFinished() {
@@ -314,6 +293,8 @@ void timeToPressButtonFinished() {
       score += 100;
       Serial.print("New point! Score: ");
       Serial.println(score);
+  } else {
+    restartGame();
   }
 
   //Resettiamo il bottone premuto precedentemente
