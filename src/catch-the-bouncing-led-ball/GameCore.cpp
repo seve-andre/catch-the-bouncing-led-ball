@@ -7,7 +7,7 @@
 
 int gameStatus;
 int frequency = 2;
-int difficulty = 1;
+int difficulty;
 int factor = 100;
 unsigned int S = 2000; //Timer-millis per switch Leds
 unsigned int T1 = 10000; //Timer-millis per pausa ogni 10s
@@ -171,6 +171,7 @@ void setUpPlayGame() {
     if (firstTimeGameCore) {
       digitalWrite(leds[0], HIGH);
       firstTimeGameCore = false;
+      difficulty = map(analogRead(POT_PIN),0, 1023, 1, 8);
       
       for (int i = 0; i < N_GREEN_LEDS; i++) {
         pinMode(leds[i], OUTPUT);
